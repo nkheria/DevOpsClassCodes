@@ -8,8 +8,12 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                // Checkout code from GitHub repository
-                git url: 'https://github.com/nkheria/DevOpsClassCodes.git', branch: 'master'
+                // Checkout code from the GitHub repository
+                script {
+                    def branchName = env.BRANCH_NAME
+                    echo "Checking out branch: ${branchName}"
+                    git url: 'https://github.com/nkheria/DevOpsClassCodes.git', branch: branchName
+                }
             }
         }
 
@@ -17,8 +21,8 @@ pipeline {
             steps {
                 // Build the project using Maven
                 script {
-                    withEnv(["PATH+MAVEN=${MAVEN_HOME}\\bin"]) {
-                        bat 'mvn clean package'
+                    withEnv(["PATH+MAVEN=${MAVEN_HOME}/bin"]) {
+                        sh 'mvn clean package'
                     }
                 }
             }
@@ -28,6 +32,32 @@ pipeline {
             steps {
                 // Archive the built artifacts
                 archiveArtifacts artifacts: '**/target/*.jar', allowEmptyArchive: true
+            }
+        }
+
+        stage('Test') {
+            when {
+                expression { return env.BRANCH_NAME.startsWith('feature/') }
+            }
+            steps {
+                // Run tests for feature branches
+                script {
+                    withEnv(["PATH+MAVEN=${MAVEN_HOME}/bin"]) {
+                        sh 'mvn test'
+                    }
+                }
+            }
+        }
+
+        stage('Deploy') {
+            when {
+                branch 'master'
+            }
+            steps {
+                // Deploy for the master branch
+                echo 'Deploying to production...'
+                // Add your deployment commands here
+                // e.g., sh 'deploy.sh'
             }
         }
     }
